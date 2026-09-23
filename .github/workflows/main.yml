@@ -61,3 +61,21 @@ jobs:
           files: dist/controle-financeiro.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    needs: [build, deploy]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Enviar alerta no Discord
+        run: |
+          if [ "${{ needs.build.result }}" = "success" ] && [ "${{ needs.deploy.result }}" = "success" ]; then
+            STATUS="✅ Sucesso"
+          else
+            STATUS="❌ Falhou"
+          fi
+
+          curl -H "Content-Type: application/json" -X POST -d "{
+            \"content\": \"**Controle Financeiro - CI/CD**\\nStatus: ${STATUS}\\nBranch: main\\nCommit: \`${{ github.sha }}\`\\nAutor: ${{ github.actor }}\\nRun: #${{ github.run_number }}\\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+          }" "${{ secrets.DISCORD_WEBHOOK }}"
